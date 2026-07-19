@@ -6,6 +6,7 @@ from airflow.utils.dates import days_ago
 import pandas as pd
 import sqlite3
 import os
+from io import StringIO
 
 
 #@task
@@ -16,7 +17,7 @@ def extract():
 
 #@task
 #Finding the Unique values
-def transform():
+def transform(**context):
     csv_path = os.path.join(os.path.dirname(__file__), "test_energy_data.csv")
     df = pd.read_csv(csv_path)
     #Build_transform
@@ -47,11 +48,20 @@ def transform():
     fact_df = fact_df.merge(env_df, on='Temp Category', how='left')
     print("Env_df Merged")
 
-    return build_df, env_df, time_df, fact_df
+    context['ti'].xcom_push(key='build_df', value=build_df.to_json())
+    context['ti'].xcom_push(key='time_df', value=time_df.to_json())
+    context['ti'].xcom_push(key='env_df', value=env_df.to_json())
+    context['ti'].xcom_push(key='fact_df', value=fact_df.to_json())
+
+    #return build_df, env_df, time_df, fact_df
 
 #@task
-def load():
-    build_df, env_df, time_df, fact_df = transform()
+def load(**context):
+    #build_df, env_df, time_df, fact_df = transform()
+    build_df = pd.read_json(StringIO(context['ti'].xcom_pull(task_ids = 'transform_data', key='build_df')))
+    env_df = pd.read_json(StringIO(context['ti'].xcom_pull(task_ids = 'transform_data', key='env_df')))
+    time_df = pd.read_json(StringIO(context['ti'].xcom_pull(task_ids = 'transform_data', key='time_df')))
+    fact_df = pd.read_json(StringIO(context['ti'].xcom_pull(task_ids = 'transform_data', key='fact_df')))
     conn = sqlite3.connect('FinalDB.db')
     build_df.to_sql('Dim_Building', conn, if_exists='replace', index=False)
     env_df.to_sql('Dim_Environment', conn, if_exists='replace', index=False)
@@ -59,6 +69,7 @@ def load():
     fact_df.to_sql('Fact_table', conn, if_exists='replace', index=False)
     conn.close()
     print("Load Successful")
+
 
 #defining DAG args
 default_args = {
@@ -93,18 +104,20 @@ execute_extract = PythonOperator(
 )
 
 #Task-2 Transform
-#execute_transform = PythonOperator(
-    #task_id = "transform_data",
-    #python_callable=transform,
-    #dag = dag
-#)
+execute_transform = PythonOperator(
+    task_id = "transform_data",
+    provide_context=True,
+    python_callable=transform,
+    dag = dag
+)
 
 #Task-3 Load
 execute_load = PythonOperator(
     task_id = "Load_data",
+    provide_context=True,
     python_callable=load,
     dag = dag
 )
 
 #Task pipeline
-execute_extract >> execute_load
+execute_extract >> execute_transform >> execute_load
