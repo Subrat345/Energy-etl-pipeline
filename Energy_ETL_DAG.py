@@ -1,10 +1,11 @@
+from sqlalchemy import create_engine
 from datetime import timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 #from airflow.decorators import dag, task
 import pandas as pd
-import sqlite3
+#import sqlite3
 import os
 from io import StringIO
 
@@ -62,12 +63,15 @@ def load(**context):
     env_df = pd.read_json(StringIO(context['ti'].xcom_pull(task_ids = 'transform_data', key='env_df')))
     time_df = pd.read_json(StringIO(context['ti'].xcom_pull(task_ids = 'transform_data', key='time_df')))
     fact_df = pd.read_json(StringIO(context['ti'].xcom_pull(task_ids = 'transform_data', key='fact_df')))
-    conn = sqlite3.connect('FinalDB.db')
-    build_df.to_sql('Dim_Building', conn, if_exists='replace', index=False)
-    env_df.to_sql('Dim_Environment', conn, if_exists='replace', index=False)
-    time_df.to_sql('Dim_Time', conn, if_exists='replace', index=False)
-    fact_df.to_sql('Fact_table', conn, if_exists='replace', index=False)
-    conn.close()
+    #conn = sqlite3.connect('FinalDB.db')
+    engine = create_engine('postgresql+psycopg2://postgres:postgres@localhost:5432/energy_etl')
+    #conn = engine.connect()
+    build_df.to_sql('Dim_Building', engine, if_exists='replace', index=False)
+    env_df.to_sql('Dim_Environment', engine, if_exists='replace', index=False)
+    time_df.to_sql('Dim_Time', engine, if_exists='replace', index=False)
+    fact_df.to_sql('Fact_table', engine, if_exists='replace', index=False)
+    #conn.close()
+    engine.dispose()
     print("Load Successful")
 
 
