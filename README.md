@@ -7,11 +7,11 @@ This pipeline extracts energy usuage data from source, transforms it into star s
 
 ## Tech Stack
 Python, 
-Pannda, 
+Panda, 
 PostgreSQL, 
 Apache Airflow, 
 XCom for data exchange, 
 Star Schema(Data Warehouse), 
 
 ## Pipeline
-Extarct(CSV) >> Transform(Dim Table + Fact Table) >> Load(Sqlite)
+Extarct(CSV) >> Transform(Dim Table + Fact Table) >> Load(PostgreSQL)
