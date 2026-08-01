@@ -12,6 +12,17 @@ PostgreSQL,
 Apache Airflow, 
 XCom for data exchange, 
 Star Schema(Data Warehouse), 
+Fast Api
+
+## API Endpoints
+GET / - API Status
+GET /buildings - building types
+GET /energy - energy consumption data
+GET /time - time dimension data
 
 ## Pipeline
 Extarct(CSV) >> Transform(Dim Table + Fact Table) >> Load(PostgreSQL)
+
+## Progress Log
+
+
